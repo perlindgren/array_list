@@ -1,9 +1,9 @@
-#[derive(Debug)]
-struct Node<'a, T>
+#[derive(Debug, Copy, Clone)]
+struct Node<T>
 where
     T: Copy,
 {
-    data: &'a T,
+    data: T,
     next: Option<u8>, // u8 to represent index
 }
 
@@ -14,14 +14,14 @@ where
 {
     head: Option<u8>,
     free: Option<u8>,
-    nodes: &'a mut [Node<'a, T>],
+    nodes: &'a mut [Node<T>],
 }
 
 impl<'a, T> List<'a, T>
 where
     T: Copy,
 {
-    fn new(nodes: &'a mut [Node<'a, T>]) -> Self {
+    fn new(nodes: &'a mut [Node<T>]) -> Self {
         for n in 0..nodes.len() - 1 {
             nodes[n].next = Some(n as u8 + 1);
         }
@@ -33,7 +33,7 @@ where
         }
     }
 
-    fn push(&mut self, v: &'a mut T) {
+    fn push(&mut self, v: T) {
         match self.free {
             Some(n) => {
                 self.free = self.nodes[n as usize].next;
@@ -80,20 +80,19 @@ where
     }
 }
 
-static mut NODES: [Node<Option<i32>>; 4] = [Node {
-    data: &None,
+static mut NODES: [Node<i32>; 4] = [Node {
+    data: 0,
     next: None,
 }; 4];
-
 fn main() {
     let mut list = List::new(unsafe { &mut NODES });
-    list.push(&mut Some(1));
-    list.push(&mut Some(2));
-    list.push(&mut Some(3));
+    list.push(1);
+    list.push(2);
+    list.push(3);
     let v = list.pop();
     println!("{:?}", v);
 
-    list.push(&mut Some(5));
+    list.push(5);
 
     println!("list {:?}", list);
     println!("list {}", list);
