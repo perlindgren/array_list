@@ -1,7 +1,7 @@
 #[derive(Debug, Copy, Clone)]
 struct Node<T>
 where
-    T: Copy,
+    T: Copy + PartialOrd,
 {
     data: T,
     next: Option<u8>, // u8 to represent index
@@ -10,7 +10,7 @@ where
 #[derive(Debug)]
 struct List<'a, T>
 where
-    T: Copy,
+    T: Copy + PartialOrd,
 {
     head: Option<u8>,
     free: Option<u8>,
@@ -19,7 +19,7 @@ where
 
 impl<'a, T> List<'a, T>
 where
-    T: Copy,
+    T: Copy + PartialOrd,
 {
     fn new(nodes: &'a mut [Node<T>]) -> Self {
         for n in 0..nodes.len() - 1 {
@@ -31,6 +31,48 @@ where
             free: Some(0),
             nodes,
         }
+    }
+
+    #[inline]
+    fn alloc(&mut self) -> u8 {
+        match self.free {
+            Some(i) => {
+                self.free = self.nodes[i as usize].next;
+                i
+            }
+            _ => panic!("Free depleted"),
+        }
+    }
+
+    #[inline]
+    fn free(&mut self, i: u8) {
+        let mut n = self.nodes[i as usize];
+        n.next = self.free;
+        self.free = Some(i)
+    }
+
+    #[inline]
+    fn insert_sort(&mut self, v: T) {
+        // allocate a new node and set value
+        let i = self.alloc();
+        self.nodes[i as usize].data = v;
+
+        // get a pointer to the head
+        let mut n = &mut self.head;
+
+        while let Some(e) = n {
+            if self.nodes[*e as usize].data < self.nodes[i as usize].data {
+                break;
+            }
+            n = &mut self.nodes[*e as usize].next;
+        }
+
+        // i is the node index to insert
+        // should be inserted before n
+
+        let n_next = *n;
+        *n = Some(i);
+        self.nodes[i as usize].next = n_next;
     }
 
     fn push(&mut self, v: T) {
@@ -67,7 +109,7 @@ use std::fmt;
 
 impl<'a, T> fmt::Display for List<'a, T>
 where
-    T: fmt::Debug + Copy,
+    T: fmt::Debug + Copy + PartialOrd,
 {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "List :");
@@ -80,31 +122,25 @@ where
     }
 }
 
-static mut NODES: [Node<i32>; 4] = [Node {
+static mut NODES: [Node<i32>; 3] = [Node {
     data: 0,
     next: None,
-}; 4];
+}; 3];
 fn main() {
     let mut list = List::new(unsafe { &mut NODES });
-    list.push(1);
-    list.push(2);
-    list.push(3);
-    let v = list.pop();
-    println!("{:?}", v);
-
-    list.push(5);
 
     println!("list {:?}", list);
     println!("list {}", list);
 
-    let _ = list.pop();
-    let _ = list.pop();
-    let _ = list.pop();
+    let _ = list.insert_sort(1);
     println!("list {:?}", list);
     println!("list {}", list);
 
-    let _ = list.pop();
+    let _ = list.insert_sort(3);
+    println!("list {:?}", list);
     println!("list {}", list);
 
-    let _ = list.pop();
+    let _ = list.insert_sort(2);
+    println!("list {:?}", list);
+    println!("list {}", list);
 }
