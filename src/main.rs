@@ -1,9 +1,11 @@
+use core::mem::MaybeUninit;
+
 #[derive(Debug, Copy, Clone)]
 struct Node<T>
 where
     T: Copy + PartialOrd,
 {
-    data: T,
+    data: MaybeUninit<T>,
     next: Option<u8>, // u8 to represent index
 }
 
@@ -55,13 +57,15 @@ where
     fn insert_sort(&mut self, v: T) {
         // allocate a new node and set value
         let i = self.alloc();
-        self.nodes[i as usize].data = v;
+        unsafe { self.nodes[i as usize].data.as_mut_ptr().write(v) };
 
         // get a pointer to the head
         let mut n = &mut self.head;
 
         while let Some(e) = n {
-            if self.nodes[*e as usize].data < self.nodes[i as usize].data {
+            if unsafe {
+                &*self.nodes[*e as usize].data.as_ptr() < &*self.nodes[i as usize].data.as_ptr()
+            } {
                 break;
             }
             n = &mut self.nodes[*e as usize].next;
@@ -81,7 +85,9 @@ where
                 self.free = self.nodes[n as usize].next;
                 let mut new_head = &mut self.nodes[n as usize];
 
-                new_head.data = v;
+                unsafe {
+                    new_head.data.as_mut_ptr().write(v);
+                }
                 new_head.next = self.head;
                 self.head = Some(n);
             }
@@ -98,7 +104,7 @@ where
 
                 new_free.next = self.free;
                 self.free = Some(n);
-                new_free.data.clone()
+                unsafe { new_free.data.as_ptr().read() }
             }
             None => panic!("List empty"),
         }
@@ -123,9 +129,10 @@ where
 }
 
 static mut NODES: [Node<i32>; 3] = [Node {
-    data: 0,
+    data: MaybeUninit::uninit(),
     next: None,
 }; 3];
+
 fn main() {
     let mut list = List::new(unsafe { &mut NODES });
 
